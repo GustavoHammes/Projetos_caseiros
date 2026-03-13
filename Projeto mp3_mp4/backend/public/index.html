@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baixador de Áudio Web</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #f0f0f0; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); width: 300px; display: flex; flex-direction: column; gap: 15px; }
+        input[type="text"], input[type="password"] { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; box-sizing: border-box; }
+        button { padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2 style="text-align: center; margin-top: 0;">Baixador Web</h2>
+        
+        <input type="password" id="password" placeholder="Senha de acesso">
+        <input type="text" id="url" placeholder="Link do YouTube">
+        
+        <label style="display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="thumbnail">
+            Incluir Capa (Thumbnail)?
+        </label>
+        
+        <button onclick="baixarAudio()">Baixar Áudio</button>
+    </div>
+
+    <script>
+        function baixarAudio() {
+            const password = document.getElementById('password').value;
+            const url = document.getElementById('url').value;
+            const thumbnail = document.getElementById('thumbnail').checked;
+
+            if (!password || !url) {
+                alert('Por favor, preencha a senha e o link!');
+                return;
+            }
+
+            // Na web é muito mais fácil: basta redirecionar a janela para a URL da sua API.
+            // O navegador percebe que é um arquivo e faz o download sozinho (aquela caixinha de "Salvar como").
+            const downloadUrl = `/api/download?url=${encodeURIComponent(url)}&thumbnail=${thumbnail}&password=${password}`;
+            
+            // Inicia o download
+            window.location.href = downloadUrl;
+        }
+    </script>
+
+</body>
+</html>
