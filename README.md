@@ -10,12 +10,12 @@ Este espaço funciona como minha oficina: um lugar para resolver problemas reais
 
 Cada projeto é independente e vive em sua própria pasta. Aqui está o resumo do que você vai encontrar por aqui:
 
-### 🎵 [Baixador de MP3](./Projeto-mp3_mp4)
+### 🎵 [Baixador de MP3](./Projeto mp3_mp4)
 Uma aplicação web e mobile focada em extrair e baixar o áudio de vídeos do YouTube de forma rápida e prática.
 * **Stack:** React, Node.js
 * **Status:** [Concluído / Em constante melhoria]
 
-### 🌱 [Regador Automático](./Projeto-Regador_automatico)
+### 🌱 [Regador Automático](./Projeto Regador automatico)
 Um sistema prático para automatizar o cuidado com as plantas de casa, garantindo que elas recebam água no momento certo.
 * **Stack:** [ex: Arduino, C++, Python, etc.]
 * **Status:** [Em desenvolvimento]
