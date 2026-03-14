@@ -23,7 +23,8 @@ app.get('/api/download', (req, res) => {
         console.log(`[Nova Requisição] Baixando VÍDEO (${qualidade}p) de: ${url}`);
         
         // O segredo aqui: força a juntar áudio e vídeo em mp4, e tenta respeitar a qualidade máxima pedida
-        command = `yt-dlp -f "bestvideo[height<=${qualidade}]+bestaudio/best" --merge-output-format mp4 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
+        // Adicionamos um /best no final do -f
+        command = `yt-dlp -f "bestvideo[height<=${qualidade}]+bestaudio/best/best" --merge-output-format mp4 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
     } else {
         console.log(`[Nova Requisição] Baixando ÁUDIO de: ${url}`);
         
