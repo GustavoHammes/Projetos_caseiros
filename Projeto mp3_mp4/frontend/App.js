@@ -28,54 +28,37 @@ export default function App() {
       return;
     }
 
-    setIsLoading(true); // Liga a bolinha de carregamento
-
+    setIsLoading(true);
     const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-    // Monta a URL enviando todas as escolhas para o servidor
     const requestUrl = `${BACKEND_URL}?url=${encodeURIComponent(url)}&password=${password}&tipo=${tipo}&qualidade=${qualidade}`;
 
     try {
+      // 1. O App "pergunta" pro servidor se está tudo bem (sem sair da tela)
+      const response = await fetch(requestUrl);
+
+      // 2. Se o servidor responder com erro (ex: 500 do Instagram)
+      if (!response.ok) {
+        const errorMessage = await response.text();
+        // Mostra o erro num pop-up e cancela o processo!
+        Alert.alert('Ops! Erro no Download', errorMessage);
+        setIsLoading(false);
+        return; 
+      }
+
+      // 3. Se deu tudo certo (Status 200), aí sim baixamos o arquivo!
       if (Platform.OS === 'web') {
-        // Lógica da Web: O navegador continua cuidando de tudo sozinho!
-        window.location.href = requestUrl; 
+        // Criamos um link temporário invisível para baixar o arquivo sem sair da página
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = tipo === 'video' ? 'video.mp4' : 'audio.mp3'; 
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       } else {
-        // Lógica do Celular
-        const FileSystem = require('expo-file-system');
-        const Sharing = require('expo-sharing');
-
-        // 1. Baixamos primeiro para um arquivo temporário qualquer
-        const tempUri = `${FileSystem.documentDirectory}temp_audio.mp3`;
-        const downloadResumable = FileSystem.createDownloadResumable(requestUrl, tempUri);
-        
-        // 2. O Expo nos devolve o "status" e também os "headers" (onde está o nome do arquivo)
-        const { uri, status, headers } = await downloadResumable.downloadAsync();
-
-        if (status === 200) {
-          // 3. Procuramos o nome do arquivo que o backend enviou
-          const contentDisposition = headers['content-disposition'] || headers['Content-Disposition'];
-          let realFileName = `musica_${Date.now()}.mp3`; // Fallback caso dê erro
-
-          if (contentDisposition) {
-            // Usa uma expressão regular (RegEx) para pescar o nome dentro do texto do cabeçalho
-            const matches = /filename="([^"]+)"/.exec(contentDisposition);
-            if (matches != null && matches[1]) {
-              realFileName = matches[1];
-            }
-          }
-
-          // 4. Renomeamos o arquivo temporário para o nome real do vídeo
-          const finalUri = `${FileSystem.documentDirectory}${realFileName}`;
-          await FileSystem.moveAsync({
-            from: uri,
-            to: finalUri
-          });
-
-          // 5. Compartilha/Salva o arquivo com o nome perfeito!
-          await Sharing.shareAsync(finalUri); 
-        } else {
           Alert.alert('Erro', 'Senha incorreta ou erro no servidor.');
         }
-      }
     } catch (error) {
       Alert.alert('Erro', 'Falha na conexão com o servidor.');
     } finally {
