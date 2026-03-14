@@ -18,11 +18,16 @@ app.get('/api/download', (req, res) => {
     }
 
     let command = '';
+    
+    // Só usa o arquivo de cookies se o link for do Instagram
+    const usarCookies = url.includes('instagram.com') ? '--cookies cookies.txt' : '';
 
     if (tipo === 'video') {
-        command = `yt-dlp --cookies cookies.txt -f "bestvideo[height<=${qualidade}]+bestaudio/best/best" --merge-output-format mp4 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
+        console.log(`[Nova Requisição] Baixando VÍDEO (${qualidade}p) de: ${url}`);
+        command = `yt-dlp ${usarCookies} -f "bestvideo[height<=${qualidade}]+bestaudio/best/best" --merge-output-format mp4 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
     } else {
-        command = `yt-dlp --cookies cookies.txt -x --audio-format mp3 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
+        console.log(`[Nova Requisição] Baixando ÁUDIO de: ${url}`);
+        command = `yt-dlp ${usarCookies} -x --audio-format mp3 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
     }
 
     // Executa o comando

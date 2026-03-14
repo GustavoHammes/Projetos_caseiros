@@ -39,9 +39,14 @@ export default function App() {
       // 2. Se o servidor responder com erro (ex: 500 do Instagram)
       if (!response.ok) {
         const errorMessage = await response.text();
-        // Mostra o erro num pop-up e cancela o processo!
-        Alert.alert('Ops! Erro no Download', errorMessage);
-        setIsLoading(false);
+        setIsLoading(false); // Para a bolinha de carregar
+        
+        // Garante que o popup vai aparecer tanto no App do celular quanto no Site (Vercel)
+        if (Platform.OS === 'web') {
+          window.alert(`Ops! Não foi possível baixar: ${errorMessage}`);
+        } else {
+          Alert.alert('Ops! Erro no Download', errorMessage);
+        }
         return; 
       }
 
