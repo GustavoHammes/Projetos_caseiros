@@ -6,7 +6,9 @@ const fs = require('fs');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    exposedHeaders: ['Content-Disposition']
+}));
 const PORT = 3000;
 
 // Rota de download (usamos GET para facilitar o download no app)
@@ -24,7 +26,8 @@ app.get('/api/download', (req, res) => {
 
     if (tipo === 'video') {
         console.log(`[Nova Requisição] Baixando VÍDEO (${qualidade}p) de: ${url}`);
-        command = `yt-dlp ${usarCookies} -f "bestvideo[height<=${qualidade}]+bestaudio/best/best" --merge-output-format mp4 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
+        // Força formatos universais (mp4 e m4a) para garantir que tenha áudio em qualquer celular/PC
+        command = `yt-dlp ${usarCookies} -f "bestvideo[ext=mp4][height<=${qualidade}]+bestaudio[ext=m4a]/best[ext=mp4]/best" --merge-output-format mp4 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
     } else {
         console.log(`[Nova Requisição] Baixando ÁUDIO de: ${url}`);
         command = `yt-dlp ${usarCookies} -x --audio-format mp3 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;

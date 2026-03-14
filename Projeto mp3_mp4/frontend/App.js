@@ -52,12 +52,22 @@ export default function App() {
 
       // 3. Se deu tudo certo (Status 200), aí sim baixamos o arquivo!
       if (Platform.OS === 'web') {
-        // Criamos um link temporário invisível para baixar o arquivo sem sair da página
         const blob = await response.blob();
+        
+        // Magia para pegar o nome original do arquivo enviado pelo servidor!
+        const contentDisposition = response.headers.get('Content-Disposition');
+        let filename = tipo === 'video' ? 'video.mp4' : 'audio.mp3'; // Nome reserva
+        if (contentDisposition && contentDisposition.includes('filename=')) {
+          // Extrai o nome e tira as aspas
+          filename = contentDisposition.split('filename=')[1].replace(/"/g, ''); 
+          // Opcional: decodifica caracteres especiais (como acentos)
+          filename = decodeURIComponent(filename); 
+        }
+
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
-        a.download = tipo === 'video' ? 'video.mp4' : 'audio.mp3'; 
+        a.download = filename; // Agora usa o nome real!
         document.body.appendChild(a);
         a.click();
         a.remove();
