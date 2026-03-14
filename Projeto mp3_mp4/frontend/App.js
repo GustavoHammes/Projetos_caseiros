@@ -1,136 +1,169 @@
 import React, { useState } from 'react';
 import { 
   StyleSheet, Text, View, TextInput, Switch, 
-  TouchableOpacity, ActivityIndicator, Alert, Platform 
+  TouchableOpacity, ActivityIndicator, Alert, Platform, Image 
 } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons'; // Importando as logos oficiais!
 
 export default function App() {
   const [password, setPassword] = useState('');
   const [url, setUrl] = useState('');
-  const [tipo, setTipo] = useState('audio'); // 'audio' ou 'video'
+  const [tipo, setTipo] = useState('audio');
   const [qualidade, setQualidade] = useState('1080'); 
-  const [isLoading, setIsLoading] = useState(false); // Estado de carregamento
+  const [thumbnail, setThumbnail] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // UX: Identifica a plataforma automaticamente pelo link
+  // Agora usando os nomes oficiais dos ícones do FontAwesome5
   const getPlatformInfo = (link) => {
-    if (!link) return { nome: 'Nenhuma', cor: '#ccc', icone: '🌐' };
-    if (link.includes('instagram.com')) return { nome: 'Instagram', cor: '#E1306C', icone: '📸' };
-    if (link.includes('tiktok.com')) return { nome: 'TikTok', cor: '#000000', icone: '🎵' };
-    if (link.includes('youtube.com') || link.includes('youtu.be')) return { nome: 'YouTube', cor: '#FF0000', icone: '▶️' };
-    return { nome: 'Link Genérico', cor: '#007bff', icone: '🔗' };
+    if (!link) return { nome: '', cor: '#ccc', iconName: 'link' };
+    if (link.includes('instagram.com')) return { nome: 'Instagram', cor: '#E1306C', iconName: 'instagram' };
+    if (link.includes('tiktok.com')) return { nome: 'TikTok', cor: '#000000', iconName: 'tiktok' };
+    if (link.includes('youtube.com') || link.includes('youtu.be')) return { nome: 'YouTube', cor: '#FF0000', iconName: 'youtube' };
+    return { nome: 'Link Genérico', cor: '#007bff', iconName: 'link' };
+  };
+
+  const getThumbnailUrl = (link) => {
+    const match = link.match(/[?&]v=([^&]+)/) || link.match(/youtu\.be\/([^?]+)/);
+    if (match && match[1]) {
+      return `https://img.youtube.com/vi/${match[1]}/hqdefault.jpg`;
+    }
+    return null;
   };
 
   const plataforma = getPlatformInfo(url);
+  const capaUrl = getThumbnailUrl(url);
 
   const handleDownload = async () => {
     if (!url || !password) {
-      Alert.alert('Erro', 'Preencha a URL e a senha.');
+      Alert.alert('Ops!', 'Preencha a URL e a senha para continuar.');
       return;
     }
 
     setIsLoading(true);
+
     const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-    const requestUrl = `${BACKEND_URL}?url=${encodeURIComponent(url)}&password=${password}&tipo=${tipo}&qualidade=${qualidade}`;
+    const requestUrl = `${BACKEND_URL}?url=${encodeURIComponent(url)}&password=${password}&tipo=${tipo}&qualidade=${qualidade}&thumbnail=${thumbnail}`;
 
     try {
-      // 1. O App "pergunta" pro servidor se está tudo bem (sem sair da tela)
-      const response = await fetch(requestUrl);
-
-      // 2. Se o servidor responder com erro (ex: 500 do Instagram)
-      if (!response.ok) {
-        const errorMessage = await response.text();
-        setIsLoading(false); // Para a bolinha de carregar
-        
-        // Garante que o popup vai aparecer tanto no App do celular quanto no Site (Vercel)
-        if (Platform.OS === 'web') {
-          window.alert(`Ops! Não foi possível baixar: ${errorMessage}`);
-        } else {
-          Alert.alert('Ops! Erro no Download', errorMessage);
-        }
-        return; 
-      }
-
-      // 3. Se deu tudo certo (Status 200), aí sim baixamos o arquivo!
       if (Platform.OS === 'web') {
-        const blob = await response.blob();
+        const response = await fetch(requestUrl);
         
-        // Magia para pegar o nome original do arquivo enviado pelo servidor!
+        if (!response.ok) {
+          const errorMessage = await response.text();
+          window.alert(`Erro ao baixar: ${errorMessage}`);
+          setIsLoading(false);
+          return;
+        }
+
+        const blob = await response.blob();
         const contentDisposition = response.headers.get('Content-Disposition');
-        let filename = tipo === 'video' ? 'video.mp4' : 'audio.mp3'; // Nome reserva
+        let filename = tipo === 'video' ? 'video.mp4' : 'audio.mp3'; 
+        
         if (contentDisposition && contentDisposition.includes('filename=')) {
-          // Extrai o nome e tira as aspas
           filename = contentDisposition.split('filename=')[1].replace(/"/g, ''); 
-          // Opcional: decodifica caracteres especiais (como acentos)
           filename = decodeURIComponent(filename); 
         }
 
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
-        a.download = filename; // Agora usa o nome real!
+        a.download = filename; 
         document.body.appendChild(a);
         a.click();
         a.remove();
+
       } else {
-          Alert.alert('Erro', 'Senha incorreta ou erro no servidor.');
+        const FileSystem = require('expo-file-system');
+        const Sharing = require('expo-sharing');
+
+        const tempUri = `${FileSystem.documentDirectory}temp_arquivo`;
+        const downloadResumable = FileSystem.createDownloadResumable(requestUrl, tempUri);
+        
+        const { uri, status, headers } = await downloadResumable.downloadAsync();
+
+        if (status === 200) {
+          const contentDisposition = headers['content-disposition'] || headers['Content-Disposition'];
+          let realFileName = tipo === 'video' ? `video_${Date.now()}.mp4` : `audio_${Date.now()}.mp3`;
+
+          if (contentDisposition) {
+            const matches = /filename="([^"]+)"/.exec(contentDisposition);
+            if (matches != null && matches[1]) {
+              realFileName = matches[1];
+            }
+          }
+
+          const finalUri = `${FileSystem.documentDirectory}${realFileName}`;
+          await FileSystem.moveAsync({ from: uri, to: finalUri });
+          await Sharing.shareAsync(finalUri); 
+        } else {
+          Alert.alert('Erro', 'Verifique a senha ou o link do vídeo.');
         }
+      }
     } catch (error) {
-      Alert.alert('Erro', 'Falha na conexão com o servidor.');
+      Alert.alert('Erro de Conexão', 'O servidor parece estar offline.');
     } finally {
-      setIsLoading(false); // Desliga a bolinha independente de dar certo ou erro
+      setIsLoading(false); 
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Baixador Universal 🚀</Text>
-        <Text style={styles.subtitle}>YouTube, TikTok e Instagram</Text>
+        <Text style={styles.title}>Super Baixador</Text>
+        <Text style={styles.subtitle}>Baixe mídias com facilidade e qualidade.</Text>
 
         <TextInput
           style={styles.input}
           placeholder="Senha de acesso"
+          placeholderTextColor="#999"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
         />
 
-        {/* Input da URL com cor dinâmica baseada na plataforma */}
         <TextInput
-          style={[styles.input, { borderColor: url ? plataforma.cor : '#ddd', borderWidth: url ? 2 : 1 }]}
-          placeholder="Cole o link do vídeo aqui..."
+          style={[styles.input, { borderColor: url ? plataforma.cor : '#E8E8E8', borderWidth: url ? 2 : 1 }]}
+          placeholder="Cole o link (YouTube, Insta, TikTok)..."
+          placeholderTextColor="#999"
           value={url}
           onChangeText={setUrl}
         />
 
-        {/* UX: Mostra de qual site é o link que o usuário colou */}
+        {/* Visualização da Logo + Texto */}
         {url ? (
-          <Text style={{ color: plataforma.cor, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' }}>
-            {plataforma.icone} Link do {plataforma.nome} detectado
-          </Text>
+          <View style={styles.platformContainer}>
+            <FontAwesome5 name={plataforma.iconName} size={20} color={plataforma.cor} />
+            <Text style={[styles.platformText, { color: plataforma.cor }]}>
+              Detectado: {plataforma.nome}
+            </Text>
+          </View>
         ) : null}
 
-        {/* Abas MP3 / MP4 */}
+        {capaUrl && (
+          <Image 
+            source={{ uri: capaUrl }} 
+            style={styles.coverImage} 
+          />
+        )}
+
         <View style={styles.tabsContainer}>
           <TouchableOpacity 
             style={[styles.tab, tipo === 'audio' && styles.tabActive]}
             onPress={() => setTipo('audio')}
           >
-            <Text style={[styles.tabText, tipo === 'audio' && styles.tabTextActive]}>🎧 Áudio (MP3)</Text>
+            <Text style={[styles.tabText, tipo === 'audio' && styles.tabTextActive]}>🎵 Áudio</Text>
           </TouchableOpacity>
-
           <TouchableOpacity 
             style={[styles.tab, tipo === 'video' && styles.tabActive]}
             onPress={() => setTipo('video')}
           >
-            <Text style={[styles.tabText, tipo === 'video' && styles.tabTextActive]}>🎬 Vídeo (MP4)</Text>
+            <Text style={[styles.tabText, tipo === 'video' && styles.tabTextActive]}>🎬 Vídeo</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Opções de Qualidade (Aparece SÓ se for Vídeo) */}
-        {tipo === 'video' && (
-          <View style={styles.qualityContainer}>
-            <Text style={styles.qualityLabel}>Qualidade do Vídeo:</Text>
+        {tipo === 'video' ? (
+          <View style={styles.optionsContainer}>
+            <Text style={styles.optionsLabel}>Qualidade:</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               {['720', '1080'].map((q) => (
                 <TouchableOpacity 
@@ -143,18 +176,26 @@ export default function App() {
               ))}
             </View>
           </View>
+        ) : (
+          <View style={styles.switchContainer}>
+            <Text style={styles.optionsLabel}>Embutir capa no MP3?</Text>
+            <Switch 
+              value={thumbnail} 
+              onValueChange={setThumbnail} 
+              trackColor={{ false: '#ddd', true: '#007bff' }}
+            />
+          </View>
         )}
 
-        {/* Botão de Download com Loading */}
         <TouchableOpacity 
-          style={[styles.button, { backgroundColor: isLoading ? '#999' : '#007bff' }]} 
+          style={[styles.button, { backgroundColor: isLoading ? '#a5c9f3' : '#007bff' }]} 
           onPress={handleDownload}
           disabled={isLoading}
         >
           {isLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#fff" size="large" />
           ) : (
-            <Text style={styles.buttonText}>Baixar Agora</Text>
+            <Text style={styles.buttonText}>Iniciar Download</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -167,79 +208,100 @@ const styles = StyleSheet.create({
     flex: 1, 
     justifyContent: 'center', 
     alignItems: 'center', 
-    backgroundColor: '#f4f7f6',
+    backgroundColor: '#EEF2F5',
     padding: 20
   },
   card: { 
-    backgroundColor: '#fff', 
-    padding: 30, 
-    borderRadius: 15, 
+    backgroundColor: '#ffffff', 
+    padding: 35, 
+    borderRadius: 24,
     width: '100%', 
-    maxWidth: 400, 
-    // Usamos Platform.select para dar a sombra certa para Celular ou Web
+    maxWidth: 420, 
     ...Platform.select({
-      web: {
-        boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.1)',
-      },
-      default: {
-        shadowColor: '#000', 
-        shadowOffset: { width: 0, height: 4 }, 
-        shadowOpacity: 0.1, 
-        shadowRadius: 10, 
-        elevation: 5,
-      }
+      web: { boxShadow: '0px 10px 30px rgba(0, 0, 0, 0.08)' },
+      default: { elevation: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 15 }
     })
   },
   title: { 
-    fontSize: 26, 
-    fontWeight: 'bold', 
-    color: '#333', 
+    fontSize: 28, 
+    fontWeight: '800', 
+    color: '#1A1A1A', 
     textAlign: 'center',
-    marginBottom: 5 
+    marginBottom: 8,
+    letterSpacing: -0.5
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#888',
     textAlign: 'center',
-    marginBottom: 25
+    marginBottom: 30,
+    fontWeight: '500'
   },
   input: { 
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#F7F9FA',
     borderWidth: 1, 
-    borderColor: '#e0e0e0', 
-    padding: 15, 
-    marginBottom: 15, 
-    borderRadius: 8,
-    fontSize: 16
+    borderColor: '#E8E8E8', 
+    padding: 16, 
+    marginBottom: 16, 
+    borderRadius: 14,
+    fontSize: 16,
+    color: '#333'
+  },
+  platformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    gap: 8, // Dá um espacinho elegante entre a logo e o texto
+  },
+  platformText: {
+    fontWeight: '700', 
+    fontSize: 15
+  },
+  coverImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 14,
+    marginBottom: 20,
+    resizeMode: 'cover'
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f1f3f5',
-    borderRadius: 10,
-    padding: 5,
-    marginBottom: 20,
+    backgroundColor: '#F0F2F5',
+    borderRadius: 14,
+    padding: 6,
+    marginBottom: 25,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   tabActive: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     ...Platform.select({
-      web: { boxShadow: '0px 2px 5px rgba(0,0,0,0.1)' },
-      default: { elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1 }
+      web: { boxShadow: '0px 4px 10px rgba(0,0,0,0.05)' },
+      default: { elevation: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05 }
     })
   },
-  tabText: { color: '#666', fontWeight: '600' },
-  tabTextActive: { color: '#007bff', fontWeight: 'bold' },
-  qualityContainer: { marginBottom: 20, alignItems: 'center' },
-  qualityLabel: { color: '#555', marginBottom: 8, fontWeight: '500' },
-  qualityBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, backgroundColor: '#eee' },
-  qualityBtnActive: { backgroundColor: '#343a40' },
-  qualityBtnText: { color: '#555', fontWeight: 'bold' },
-  qualityBtnTextActive: { color: '#fff', fontWeight: 'bold' },
-  button: { padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
+  tabText: { color: '#888', fontWeight: '700', fontSize: 15 },
+  tabTextActive: { color: '#007bff', fontWeight: '800', fontSize: 15 },
+  optionsContainer: { marginBottom: 25, alignItems: 'center' },
+  switchContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25, paddingHorizontal: 10 },
+  optionsLabel: { color: '#444', fontWeight: '600', fontSize: 15, marginBottom: 8 },
+  qualityBtn: { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, backgroundColor: '#F0F2F5' },
+  qualityBtnActive: { backgroundColor: '#1A1A1A' },
+  qualityBtnText: { color: '#666', fontWeight: '700' },
+  qualityBtnTextActive: { color: '#fff', fontWeight: '700' },
+  button: { 
+    padding: 18, 
+    borderRadius: 16, 
+    alignItems: 'center', 
+    marginTop: 5,
+    ...Platform.select({
+      web: { boxShadow: '0px 8px 20px rgba(0, 123, 255, 0.3)' },
+    })
+  },
+  buttonText: { color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.5 }
 });
