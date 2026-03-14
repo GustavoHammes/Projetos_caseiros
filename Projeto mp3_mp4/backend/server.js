@@ -11,27 +11,25 @@ const PORT = 3000;
 
 // Rota de download (usamos GET para facilitar o download no app)
 app.get('/api/download', (req, res) => {
-    const { url, thumbnail, password } = req.query;
+    const { url, password, tipo, qualidade } = req.query;
 
     if (password !== process.env.PASSWORD) {
-    return res.status(401).send('Acesso negado. Senha incorreta.');
-    }
-    if (!url) {
-        return res.status(400).send('URL do vídeo é obrigatória.');
+        return res.status(401).send('Acesso negado.');
     }
 
-    // O Segredo: 
-    // %(title)s pega o título do vídeo original.
-    // --restrict-filenames remove emojis, espaços bizarros e acentos que quebram o sistema.
-    // --print "after_move:filepath" avisa ao Node o nome final do arquivo gerado.
-    let command = `yt-dlp -x --audio-format mp3 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath"`;
-    
-    if (thumbnail === 'true') {
-        command += ` --embed-thumbnail`;
-    }
-    command += ` "${url}"`;
+    let command = '';
 
-    console.log('Baixando áudio com nome original...');
+    if (tipo === 'video') {
+        console.log(`[Nova Requisição] Baixando VÍDEO (${qualidade}p) de: ${url}`);
+        
+        // O segredo aqui: força a juntar áudio e vídeo em mp4, e tenta respeitar a qualidade máxima pedida
+        command = `yt-dlp -f "bestvideo[height<=${qualidade}]+bestaudio/best" --merge-output-format mp4 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
+    } else {
+        console.log(`[Nova Requisição] Baixando ÁUDIO de: ${url}`);
+        
+        // Baixa apenas o áudio e converte para MP3 garantido
+        command = `yt-dlp -x --audio-format mp3 -o "downloads/%(title)s.%(ext)s" --restrict-filenames --print "after_move:filepath" "${url}"`;
+    }
 
     // Executa o comando
     exec(command, (error, stdout, stderr) => {

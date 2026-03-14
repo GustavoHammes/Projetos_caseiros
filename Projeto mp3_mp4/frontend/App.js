@@ -7,21 +7,32 @@ import {
 export default function App() {
   const [password, setPassword] = useState('');
   const [url, setUrl] = useState('');
-  const [withThumbnail, setWithThumbnail] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const [tipo, setTipo] = useState('audio'); // 'audio' ou 'video'
+  const [qualidade, setQualidade] = useState('1080'); 
+  const [isLoading, setIsLoading] = useState(false); // Estado de carregamento
+
+  // UX: Identifica a plataforma automaticamente pelo link
+  const getPlatformInfo = (link) => {
+    if (!link) return { nome: 'Nenhuma', cor: '#ccc', icone: '🌐' };
+    if (link.includes('instagram.com')) return { nome: 'Instagram', cor: '#E1306C', icone: '📸' };
+    if (link.includes('tiktok.com')) return { nome: 'TikTok', cor: '#000000', icone: '🎵' };
+    if (link.includes('youtube.com') || link.includes('youtu.be')) return { nome: 'YouTube', cor: '#FF0000', icone: '▶️' };
+    return { nome: 'Link Genérico', cor: '#007bff', icone: '🔗' };
+  };
+
+  const plataforma = getPlatformInfo(url);
 
   const handleDownload = async () => {
-    if (!password || !url) {
-      Alert.alert('Aviso', 'Preencha a senha e o link!');
+    if (!url || !password) {
+      Alert.alert('Erro', 'Preencha a URL e a senha.');
       return;
     }
 
-    setIsDownloading(true);
+    setIsLoading(true); // Liga a bolinha de carregamento
 
-    // Quando colocar na internet, você vai trocar esse localhost pelo link do seu servidor nas nuvens
     const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-
-    const requestUrl = `${BACKEND_URL}?url=${encodeURIComponent(url)}&thumbnail=${withThumbnail}&password=${password}`;
+    // Monta a URL enviando todas as escolhas para o servidor
+    const requestUrl = `${BACKEND_URL}?url=${encodeURIComponent(url)}&password=${password}&tipo=${tipo}&qualidade=${qualidade}`;
 
     try {
       if (Platform.OS === 'web') {
@@ -66,18 +77,17 @@ export default function App() {
         }
       }
     } catch (error) {
-      Alert.alert('Erro', 'Não foi possível conectar ao servidor.');
-      console.error(error);
+      Alert.alert('Erro', 'Falha na conexão com o servidor.');
     } finally {
-      setIsDownloading(false);
+      setIsLoading(false); // Desliga a bolinha independente de dar certo ou erro
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.card}>
-        <Text style={styles.title}>Baixador de Áudio 🎵</Text>
-        <Text style={styles.subtitle}>Baixe áudios com alta qualidade.</Text>
+        <Text style={styles.title}>Baixador Universal 🚀</Text>
+        <Text style={styles.subtitle}>YouTube, TikTok e Instagram</Text>
 
         <TextInput
           style={styles.input}
@@ -85,34 +95,70 @@ export default function App() {
           secureTextEntry
           value={password}
           onChangeText={setPassword}
-          placeholderTextColor="#888"
         />
 
+        {/* Input da URL com cor dinâmica baseada na plataforma */}
         <TextInput
-          style={styles.input}
-          placeholder="Cole o link do YouTube aqui"
+          style={[styles.input, { borderColor: url ? plataforma.cor : '#ddd', borderWidth: url ? 2 : 1 }]}
+          placeholder="Cole o link do vídeo aqui..."
           value={url}
           onChangeText={setUrl}
-          placeholderTextColor="#888"
         />
 
-        <View style={styles.switchContainer}>
-          <Text style={styles.switchText}>Incluir Capa (Thumbnail)?</Text>
-          <Switch 
-            value={withThumbnail} 
-            onValueChange={setWithThumbnail}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-            thumbColor={withThumbnail ? "#007bff" : "#f4f3f4"}
-          />
+        {/* UX: Mostra de qual site é o link que o usuário colou */}
+        {url ? (
+          <Text style={{ color: plataforma.cor, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' }}>
+            {plataforma.icone} Link do {plataforma.nome} detectado
+          </Text>
+        ) : null}
+
+        {/* Abas MP3 / MP4 */}
+        <View style={styles.tabsContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, tipo === 'audio' && styles.tabActive]}
+            onPress={() => setTipo('audio')}
+          >
+            <Text style={[styles.tabText, tipo === 'audio' && styles.tabTextActive]}>🎧 Áudio (MP3)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.tab, tipo === 'video' && styles.tabActive]}
+            onPress={() => setTipo('video')}
+          >
+            <Text style={[styles.tabText, tipo === 'video' && styles.tabTextActive]}>🎬 Vídeo (MP4)</Text>
+          </TouchableOpacity>
         </View>
 
-        {isDownloading ? (
-          <ActivityIndicator size="large" color="#007bff" style={{ marginTop: 20 }} />
-        ) : (
-          <TouchableOpacity style={styles.button} onPress={handleDownload}>
-            <Text style={styles.buttonText}>Baixar Agora</Text>
-          </TouchableOpacity>
+        {/* Opções de Qualidade (Aparece SÓ se for Vídeo) */}
+        {tipo === 'video' && (
+          <View style={styles.qualityContainer}>
+            <Text style={styles.qualityLabel}>Qualidade do Vídeo:</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {['720', '1080'].map((q) => (
+                <TouchableOpacity 
+                  key={q}
+                  style={[styles.qualityBtn, qualidade === q && styles.qualityBtnActive]}
+                  onPress={() => setQualidade(q)}
+                >
+                  <Text style={[styles.qualityBtnText, qualidade === q && styles.qualityBtnTextActive]}>{q}p</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
         )}
+
+        {/* Botão de Download com Loading */}
+        <TouchableOpacity 
+          style={[styles.button, { backgroundColor: isLoading ? '#999' : '#007bff' }]} 
+          onPress={handleDownload}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Baixar Agora</Text>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -168,32 +214,34 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 16
   },
-  switchContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    marginBottom: 25,
-    paddingHorizontal: 5
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#f1f3f5',
+    borderRadius: 10,
+    padding: 5,
+    marginBottom: 20,
   },
-  switchText: {
-    fontSize: 16,
-    color: '#333'
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 8,
   },
-  button: { 
-    backgroundColor: '#007bff', 
-    padding: 15, 
-    borderRadius: 8, 
-    alignItems: 'center', 
+  tabActive: {
+    backgroundColor: '#fff',
     ...Platform.select({
-      web: {
-        boxShadow: '0px 4px 5px rgba(0, 123, 255, 0.3)',
-      },
-      default: {
-        shadowColor: '#007bff', 
-        shadowOffset: { width: 0, height: 4 }, 
-        shadowOpacity: 0.3, 
-        shadowRadius: 5, 
-      }
+      web: { boxShadow: '0px 2px 5px rgba(0,0,0,0.1)' },
+      default: { elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1 }
     })
   },
+  tabText: { color: '#666', fontWeight: '600' },
+  tabTextActive: { color: '#007bff', fontWeight: 'bold' },
+  qualityContainer: { marginBottom: 20, alignItems: 'center' },
+  qualityLabel: { color: '#555', marginBottom: 8, fontWeight: '500' },
+  qualityBtn: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, backgroundColor: '#eee' },
+  qualityBtnActive: { backgroundColor: '#343a40' },
+  qualityBtnText: { color: '#555', fontWeight: 'bold' },
+  qualityBtnTextActive: { color: '#fff', fontWeight: 'bold' },
+  button: { padding: 15, borderRadius: 10, alignItems: 'center', marginTop: 10 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' }
 });
