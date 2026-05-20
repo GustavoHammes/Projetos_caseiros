@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Baixador de Áudio",
+    "slug": "baixador-de-audio",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.seunome.baixadoraudio",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8f9e7802-8a6d-424b-92eb-97d89195d779"
+      }
+    }
+  }
+}
