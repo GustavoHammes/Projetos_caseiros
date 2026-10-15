@@ -45,7 +45,7 @@ async function checkDependencies(config) {
   }]));
 }
 function buildArgs(input, directory, config) {
-  const args = ['--ignore-config', '--no-playlist', '--no-progress', '--no-warnings', '--no-cache-dir',
+  const args = ['--ignore-config', '--no-playlist', '--playlist-items', '1', '--no-progress', '--no-warnings', '--no-cache-dir',
     '--use-extractors', 'default,-generic', '--socket-timeout', '20', '--retries', '2', '--fragment-retries', '2',
     '--max-filesize', String(config.maxBytes), '--match-filters', `!is_live & duration <= ${config.maxDuration}`,
     '--js-runtimes', `node:${process.execPath}`, '--windows-filenames', '--trim-filenames', '160',
