@@ -2,6 +2,10 @@
 
 Site privado em português para salvar áudio MP3 e vídeo MP4. Site e API funcionam no mesmo servidor Node.js, com yt-dlp e FFmpeg. O aplicativo Expo está em `frontend/`; a versão web principal está em `backend/public/` e também pode ser publicada na Vercel.
 
+**Site publicado:** https://super-baixador-hammes.onrender.com (plano Free, mesma senha configurada no backend local).
+
+**Validação em 15/10/2026:** 12 testes automatizados passaram; downloads reais de MP3 com capa e MP4 com áudio passaram para YouTube local e Internet Archive no Render. YouTube e Vimeo exigiram autenticação/verificação no IP do Render. Veja [o relatório](docs/VALIDACAO.md) antes de depender dessas plataformas na nuvem. O endereço antigo da Vercel precisa de uma nova publicação com `BACKEND_ORIGIN` para usar esta API.
+
 ## Rodar no Windows
 
 Requer Node.js 22 ou superior. Na raiz deste projeto:
