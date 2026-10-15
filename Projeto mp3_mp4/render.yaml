@@ -1,0 +1,30 @@
+# yaml-language-server: $schema=https://render.com/schema/render.yaml.json
+# Este projeto fica no subdiretório "Projeto mp3_mp4" do repositório.
+services:
+  - type: web
+    name: super-baixador
+    runtime: docker
+    plan: free
+    region: virginia
+    rootDir: Projeto mp3_mp4
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    autoDeployTrigger: "off"
+    envVars:
+      - key: PASSWORD
+        sync: false
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: ALLOWED_ORIGINS
+        value: https://baixador-mp3.vercel.app
+      - key: MAX_CONCURRENT_DOWNLOADS
+        value: "1"
+      - key: MAX_FILE_SIZE_MB
+        value: "50"
+      - key: MAX_DURATION_SECONDS
+        value: "600"
+      - key: DOWNLOAD_TIMEOUT_SECONDS
+        value: "180"

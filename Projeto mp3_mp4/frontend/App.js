@@ -42,14 +42,21 @@ export default function App() {
     setIsLoading(true);
 
     const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
-    const requestUrl = `${BACKEND_URL}?url=${encodeURIComponent(url)}&password=${password}&tipo=${tipo}&qualidade=${qualidade}&thumbnail=${thumbnail}`;
+    if (!BACKEND_URL) {
+      Alert.alert('Configuração necessária', 'Defina EXPO_PUBLIC_BACKEND_URL no arquivo .env do frontend.');
+      setIsLoading(false);
+      return;
+    }
+    const requestUrl = `${BACKEND_URL}?url=${encodeURIComponent(url)}&tipo=${tipo}&qualidade=${qualidade}&thumbnail=${thumbnail}`;
+    const authHeaders = { Authorization: `Bearer ${password}` };
 
     try {
       if (Platform.OS === 'web') {
-        const response = await fetch(requestUrl);
+        const response = await fetch(requestUrl, { headers: authHeaders });
         
         if (!response.ok) {
-          const errorMessage = await response.text();
+          const errorBody = await response.json().catch(() => null);
+          const errorMessage = errorBody?.error || 'Não foi possível concluir o download.';
           window.alert(`Erro ao baixar: ${errorMessage}`);
           setIsLoading(false);
           return;
@@ -71,13 +78,14 @@ export default function App() {
         document.body.appendChild(a);
         a.click();
         a.remove();
+        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
 
       } else {
-        const FileSystem = require('expo-file-system');
+        const FileSystem = require('expo-file-system/legacy');
         const Sharing = require('expo-sharing');
 
-        const tempUri = `${FileSystem.documentDirectory}temp_arquivo`;
-        const downloadResumable = FileSystem.createDownloadResumable(requestUrl, tempUri);
+        const tempUri = `${FileSystem.cacheDirectory}download_${Date.now()}.${tipo === 'video' ? 'mp4' : 'mp3'}`;
+        const downloadResumable = FileSystem.createDownloadResumable(requestUrl, tempUri, { headers: authHeaders });
         
         const { uri, status, headers } = await downloadResumable.downloadAsync();
 
@@ -92,10 +100,14 @@ export default function App() {
             }
           }
 
-          const finalUri = `${FileSystem.documentDirectory}${realFileName}`;
+          const finalUri = `${FileSystem.cacheDirectory}${realFileName.replace(/[\\/]/g, '_')}`;
           await FileSystem.moveAsync({ from: uri, to: finalUri });
-          await Sharing.shareAsync(finalUri); 
+          try {
+            if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(finalUri);
+            else Alert.alert('Arquivo baixado', 'O compartilhamento não está disponível neste dispositivo.');
+          } finally { await FileSystem.deleteAsync(finalUri, { idempotent: true }); }
         } else {
+          await FileSystem.deleteAsync(tempUri, { idempotent: true });
           Alert.alert('Erro', 'Verifique a senha ou o link do vídeo.');
         }
       }

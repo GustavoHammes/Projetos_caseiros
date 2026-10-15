@@ -1,0 +1,11 @@
+{
+  "name": "super-baixador", "version": "2.0.0", "private": true,
+  "scripts": {
+    "start": "npm --prefix backend start",
+    "setup": "node scripts/setup-windows.js",
+    "test": "npm --prefix backend test",
+    "doctor": "npm --prefix backend run doctor",
+    "test:live": "npm --prefix backend run test:live"
+  },
+  "engines": { "node": ">=22" }
+}
