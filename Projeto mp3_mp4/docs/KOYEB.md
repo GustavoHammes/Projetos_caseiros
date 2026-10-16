@@ -1,6 +1,8 @@
 # Koyeb Free — site e API
 
-Estado em 16/10/2026: código preparado e validado localmente. O painel Koyeb está na tela de login. Nenhum serviço Koyeb foi criado e nenhum endereço Koyeb foi validado. O Render anterior permanece separado desta migração.
+Estado em 16/10/2026: código preparado e validado localmente. O usuário concluiu o login, mas a conta exibe apenas o aviso de transição para Mistral e configurações administrativas. Não há opção para criar serviços; a página de tokens indicada pela CLI também mostra o mesmo aviso. Nenhum serviço Koyeb foi criado, nenhum token foi gerado e nenhum endereço Koyeb foi validado. O Render anterior permanece separado desta migração.
+
+O [comunicado oficial de 17/02/2026](https://www.koyeb.com/blog/koyeb-is-joining-mistral-ai-to-build-the-future-of-ai-infrastructure) informa que novas contas precisam assinar planos pagos, enquanto organizações existentes no Starter mantêm seu plano. A existência de uma instância chamada `free` na documentação não significa que uma nova conta possa hospedar sem mensalidade. Portanto, este acesso não permitiu concluir o deploy com custo zero. Os passos abaixo ficam como referência para uma organização antiga elegível com acesso ao deploy.
 
 ## Configuração preparada
 
@@ -24,9 +26,9 @@ O Dockerfile existente serve site e API na mesma origem. Não precisa de banco, 
 
 ## Conta e custo
 
-Antes de confirmar o cadastro, confira o plano da conta. A documentação consultada em 16/10/2026 informa que o cadastro seleciona **Pro**, que cobra o valor proporcional do mês, além de uma pré-autorização de US$ 29 no cartão. Isso é diferente de usar apenas a instância `free`. Não foi autorizado cadastrar cartão, contratar Pro ou criar instância paga neste projeto.
+Não há contratação autorizada neste projeto. O comunicado oficial restringe novas contas a planos pagos. A FAQ de preços também informa que o cadastro seleciona **Pro**, cobra o valor proporcional do mês e faz uma pré-autorização de US$ 29 no cartão. Usar uma instância `free` dentro do Pro não elimina a mensalidade da conta.
 
-Se a conta já permitir o plano Starter sem cobrança de adesão, o script cria somente a instância `free`. Não existe tentativa de usar Nano ou outro recurso pago se Free estiver indisponível. Se o cadastro exigir contratação paga para continuar, a publicação deve aguardar uma decisão do proprietário.
+Somente se a organização já tiver Starter, acesso à criação de serviços e elegibilidade sem cobrança, o script poderá criar a instância `free`. Não existe tentativa de usar Nano ou outro recurso pago se Free estiver indisponível. O acesso atual não oferece essas ferramentas, portanto a publicação não foi iniciada. Não foi confirmado cartão, plano pago ou upgrade.
 
 Fontes oficiais: [cobrança e cadastro](https://www.koyeb.com/docs/faqs/pricing), [planos de organização](https://www.koyeb.com/docs/reference/organizations), [instância gratuita](https://www.koyeb.com/docs/reference/instances).
 
@@ -34,7 +36,7 @@ Fontes oficiais: [cobrança e cadastro](https://www.koyeb.com/docs/faqs/pricing)
 
 A CLI oficial 5.12.0 foi instalada localmente em `.tools/koyeb/koyeb.exe`, com SHA256 verificado contra o release oficial. Em outra máquina, instale pela [documentação da CLI](https://www.koyeb.com/docs/build-and-deploy/cli/installation). Binários e credenciais não são versionados.
 
-Após concluir o acesso à conta e conferir o plano, autentique a CLI com o fluxo interativo:
+Em uma organização antiga elegível, confira o plano e o acesso ao deploy antes de autenticar a CLI. `koyeb login` solicita um personal access token criado no painel, não reutiliza automaticamente o login do navegador. No acesso atual, essa página não disponibiliza criação de tokens; a tentativa interativa foi encerrada sem inserir credenciais.
 
 ```powershell
 .tools\koyeb\koyeb.exe login

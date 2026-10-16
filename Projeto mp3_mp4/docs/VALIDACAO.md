@@ -2,7 +2,9 @@
 
 ## Preparação para Koyeb Free
 
-Ainda não publicado: o painel Koyeb exige login e a conta/plano precisam ser conferidos. Não houve contratação nem criação de serviço Koyeb. O perfil e o procedimento estão em [KOYEB.md](KOYEB.md).
+Ainda não publicado: o login Koyeb foi concluído, mas a conta exibe somente o aviso de transição para Mistral e configurações administrativas. Não há ferramentas para criar serviços; a página de tokens indicada pela CLI mostra o mesmo aviso. A CLI solicita um token, e a tentativa foi encerrada sem credenciais. Não houve contratação, criação de token ou de serviço Koyeb. O perfil e o procedimento condicional estão em [KOYEB.md](KOYEB.md).
+
+O [comunicado oficial do Koyeb](https://www.koyeb.com/blog/koyeb-is-joining-mistral-ai-to-build-the-future-of-ai-infrastructure) restringe novas contas a planos pagos e preserva Starter para organizações antigas. Assim, não foi possível publicar gratuitamente com o acesso disponível. A documentação do tipo de instância `free` não basta para afirmar elegibilidade da conta.
 
 A interface passou a criar tarefas, consultar o estado e retirar o arquivo pronto. Isso evita manter a conexão HTTP aberta durante a conversão, pois o Koyeb informa limite de 100 segundos por requisição. Cancelar interrompe o processo e limpa os temporários; arquivos prontos abandonados expiram em cinco minutos. As tarefas compartilham o limite de conversões com o endpoint antigo e há limite de arquivos aguardando retirada.
 

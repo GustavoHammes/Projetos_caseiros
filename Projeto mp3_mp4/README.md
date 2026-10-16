@@ -2,7 +2,7 @@
 
 Site privado em português para salvar áudio MP3 e vídeo MP4. Site e API funcionam no mesmo servidor Node.js, com yt-dlp e FFmpeg. O aplicativo Expo está em `frontend/`; a versão web principal está em `backend/public/` e também pode ser publicada na Vercel.
 
-**Publicação anterior:** https://super-baixador-hammes.onrender.com (Render Free). A migração solicitada para Koyeb Free está preparada em [docs/KOYEB.md](docs/KOYEB.md); a publicação depende do acesso à conta Koyeb. Ainda não existe endereço Koyeb validado.
+**Publicação anterior:** https://super-baixador-hammes.onrender.com (Render Free). O código para Koyeb está preparado, mas a publicação foi impedida pela disponibilidade da plataforma: após o login, a conta mostrou apenas o aviso da transição para Mistral, sem criação de serviços ou tokens. O [comunicado oficial](https://www.koyeb.com/blog/koyeb-is-joining-mistral-ai-to-build-the-future-of-ai-infrastructure) informa que novas contas precisam de plano pago e que o Starter permanece para organizações antigas. Nenhum serviço Koyeb foi criado. Veja [docs/KOYEB.md](docs/KOYEB.md).
 
 **Validação em 16/10/2026:** 17 testes automatizados passaram. O novo fluxo assíncrono baixou MP3 com capa e MP4 com áudio do YouTube localmente; o formulário também entregou um MP3 real no navegador. Os testes anteriores do Internet Archive no Render passaram, enquanto YouTube e Vimeo exigiram autenticação/verificação naquele IP. Veja [o relatório](docs/VALIDACAO.md). O endereço antigo da Vercel precisa de uma nova publicação com `BACKEND_ORIGIN` para usar esta API.
 
@@ -72,7 +72,7 @@ As consultas autenticadas não consomem a franquia de novas solicitações. Tare
 
 O perfil [deploy/koyeb-free.json](deploy/koyeb-free.json) configura site e API no mesmo serviço Docker gratuito. `npm run deploy:koyeb` mostra o plano sem criar recursos; o procedimento de publicação e acesso está em [docs/KOYEB.md](docs/KOYEB.md).
 
-O Koyeb informa limite HTTP de 100 segundos, por isso a interface usa tarefas consultadas em requisições curtas. O app Expo ainda usa o endpoint direto e permanece sujeito a esse limite. A instância gratuita tem 512 MB, 0,1 vCPU e pausa após inatividade; a conversão pode demorar. O plano de cadastro da conta precisa ser conferido antes de qualquer confirmação de cartão ou cobrança.
+O Koyeb informa limite HTTP de 100 segundos, por isso a interface usa tarefas consultadas em requisições curtas. O app Expo ainda usa o endpoint direto e permanece sujeito a esse limite. A instância `free` tem 512 MB, 0,1 vCPU e pausa após inatividade. Ela não elimina a mensalidade de um plano Pro: o procedimento gratuito só é aplicável a uma organização que já tenha Starter e acesso ao deploy. No acesso verificado em 16/10/2026, os recursos de publicação não estavam disponíveis.
 
 ## Hospedagem gratuita no Render
 
