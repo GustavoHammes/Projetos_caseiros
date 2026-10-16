@@ -2,7 +2,7 @@
 
 Site e API usam o Node.js do Windows com yt-dlp e FFmpeg. O Cloudflare Quick Tunnel fornece acesso HTTPS ao servidor que escuta somente em `127.0.0.1`. Não exige VM, domínio, cadastro ou cartão para criar esse acesso temporário. A senha de download continua em `backend/.env`.
 
-Estado em 16/10/2026: acesso externo validado com downloads reais de MP3 com capa e MP4 com áudio do YouTube. A publicação da interface atualizada na Vercel está em validação; consulte [VALIDACAO.md](VALIDACAO.md) para o resultado final.
+Estado em 16/10/2026: site publicado em https://baixador-mp3.vercel.app, conectado à API no PC. Downloads reais de MP3 com capa e MP4 com áudio do YouTube passaram tanto pelo teste HTTP externo quanto pelo formulário da Vercel. Consulte [VALIDACAO.md](VALIDACAO.md).
 
 ## Usar
 

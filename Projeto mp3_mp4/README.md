@@ -2,9 +2,25 @@
 
 Site privado em português para salvar áudio MP3 e vídeo MP4. Site e API funcionam no mesmo servidor Node.js, com yt-dlp e FFmpeg. O aplicativo Expo está em `frontend/`; a versão web principal está em `backend/public/` e também pode ser publicada na Vercel.
 
-**Publicação anterior:** https://super-baixador-hammes.onrender.com (Render Free). O código para Koyeb está preparado, mas a publicação foi impedida pela disponibilidade da plataforma: após o login, a conta mostrou apenas o aviso da transição para Mistral, sem criação de serviços ou tokens. O [comunicado oficial](https://www.koyeb.com/blog/koyeb-is-joining-mistral-ai-to-build-the-future-of-ai-infrastructure) informa que novas contas precisam de plano pago e que o Starter permanece para organizações antigas. Nenhum serviço Koyeb foi criado. Veja [docs/KOYEB.md](docs/KOYEB.md).
+**Site publicado:** https://baixador-mp3.vercel.app — interface estática na Vercel e API no seu PC, acessível por um túnel HTTPS temporário. Use sua senha de acesso atual. O PC precisa permanecer ligado e conectado à internet.
 
-**Validação em 16/10/2026:** 17 testes automatizados passaram. O novo fluxo assíncrono baixou MP3 com capa e MP4 com áudio do YouTube localmente; o formulário também entregou um MP3 real no navegador. Os testes anteriores do Internet Archive no Render passaram, enquanto YouTube e Vimeo exigiram autenticação/verificação naquele IP. Veja [o relatório](docs/VALIDACAO.md). O endereço antigo da Vercel precisa de uma nova publicação com `BACKEND_ORIGIN` para usar esta API.
+**Validação em 16/10/2026:** 17 testes automatizados passaram. MP3 com capa e MP4 com áudio do YouTube passaram pelo acesso HTTPS externo e pelo formulário publicado na Vercel; arquivos examinados com ffprobe. Início automático no login do Windows instalado, encerramento com limpeza e reinício da API validados. Veja [o relatório](docs/VALIDACAO.md).
+
+## Usar seu PC como servidor
+
+Na pasta do projeto, use `Iniciar servidor.cmd`, `Abrir site.cmd` e `Parar servidor.cmd`. O servidor também inicia no login do Windows, em segundo plano. Consulte [o guia completo](docs/PC_SERVER.md) para instalação, comandos, logs e remoção do início automático.
+
+Sem domínio próprio, o endereço do túnel muda quando ele reinicia. Use `Abrir site.cmd` para obter o link atualizado; se o site solicitar, confira o endereço e clique em **Conectar servidor**. Essa configuração fica somente neste navegador. Reiniciar apenas a API com `npm run pc:restart` preserva o endereço do túnel.
+
+```powershell
+npm run setup:pc # em uma instalação nova: ferramentas de mídia e cloudflared
+npm run pc:start
+npm run pc:status
+npm run pc:open
+npm run pc:stop
+```
+
+O Quick Tunnel é destinado a testes e uso pessoal, sem garantia de disponibilidade ou nome permanente. [Documentação da Cloudflare](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
 
 ## Rodar no Windows
 

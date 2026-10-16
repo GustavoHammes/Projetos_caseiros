@@ -1,5 +1,33 @@
 # Resultado da validação — 16/10/2026
 
+## Resultado atual — Vercel e API no PC
+
+Site: https://baixador-mp3.vercel.app. Deployment de produção `dpl_GWwm2KskVw1xiDPAFtjxqBM2veUb`, estado READY, commit de código `5eb6d0e79f350637f8faae17ad3c2a051ccfe714`, branch `codex/profissionalizar-baixador`. A origem inicial da API foi configurada em `BACKEND_ORIGIN`, sem senha no build.
+
+| Fluxo verificado | MP3 | MP4 |
+| --- | --- | --- |
+| API no PC pelo HTTPS público | OK, MP3 e capa | OK, H.264 e áudio AAC |
+| Formulário em baixador-mp3.vercel.app | OK, arquivo recebido pelo navegador | OK, arquivo recebido pelo navegador |
+
+Origem: vídeo público do YouTube `jNQXAC9IVRw`, 19 segundos. Arquivos dos dois fluxos foram examinados com ffprobe: MP3 de 356.606 bytes, 19,005542 segundos, com capa; MP4 de 744.412 bytes, 19,063583 segundos, H.264/AAC e 240p. A seleção de 720p é um teto; o vídeo de origem é 240p.
+
+Verificações adicionais do servidor pessoal:
+
+- Health check pelo endereço HTTPS retornou `ready: true`, com as três dependências disponíveis. CORS permitiu a origem `https://baixador-mp3.vercel.app`.
+- 17 testes HTTP/controles da API passaram nesta revisão.
+- Uma tarefa real foi iniciada e o servidor foi parado pelo controle local. API e túnel encerraram; os temporários foram removidos.
+- Repetir `pc:start` preservou o supervisor existente. `pc:restart` encerrou a API por IPC, iniciou outro processo e preservou o supervisor e o endereço público do túnel.
+- Início automático instalado no Startup deste usuário. Launcher VBS executado com cscript sem erro; não foram criados processos duplicados. Não foi necessário reiniciar o Windows para esse teste.
+- Configuração da origem pelo site rejeitou HTTP, validou uma API HTTPS pronta e persistiu após recarregar. A senha não foi armazenada nessa configuração.
+- Console do navegador sem erros durante os downloads na Vercel. Senha limpa do formulário após os testes.
+- Interface e painel de conexão verificados em viewport 390 × 844: largura útil 375 px, scrollWidth 375 px, sem rolagem horizontal. Viewport restaurado ao final.
+- Requisições públicas para `/.env` e `/.artifacts/pc-server/control.key` responderam 404. Temporários vazios depois dos downloads.
+- cloudflared 2026.10.1 instalado do release oficial e SHA256 verificado. Node.js, yt-dlp e FFmpeg executam no PC.
+
+Relatórios locais fora do Git: `.artifacts/pc-public-live-test.json`, `.artifacts/pc-recovery-test.json`, `.artifacts/vercel-browser-validation.json` e as capturas do site. O estado/endereço corrente está em `.artifacts/pc-server/status.json`.
+
+O Quick Tunnel muda de endereço ao reiniciar e não oferece SLA. O PC precisa estar ligado, sem suspender e com internet. O site possui configuração de conexão por navegador para atualizar a origem sem novo deploy. Veja [PC_SERVER.md](PC_SERVER.md). A publicação anterior no Render e a tentativa no Koyeb estão documentadas abaixo como histórico.
+
 ## Preparação para Koyeb Free
 
 Ainda não publicado: o login Koyeb foi concluído, mas a conta exibe somente o aviso de transição para Mistral e configurações administrativas. Não há ferramentas para criar serviços; a página de tokens indicada pela CLI mostra o mesmo aviso. A CLI solicita um token, e a tentativa foi encerrada sem credenciais. Não houve contratação, criação de token ou de serviço Koyeb. O perfil e o procedimento condicional estão em [KOYEB.md](KOYEB.md).
