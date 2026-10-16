@@ -6,8 +6,16 @@ const urlInput = $('#media-url');
 const password = $('#password');
 const feedback = $('#feedback');
 const historyKey = 'superbaixador.history.v1';
-const apiBase = window.SUPER_BAIXADOR_API || '';
-let controller;
+const defaultApiBase = window.SUPER_BAIXADOR_API || '';
+const serverKey = 'superbaixador.server.v1';
+function serverOrigin(value) {
+  const url = new URL(value.trim());
+  if (url.protocol !== 'https:' || url.username || url.password || url.port || url.pathname !== '/' || url.search || url.hash) throw new Error('Use somente o endereço HTTPS do servidor, sem caminho ou senha.');
+  return url.origin;
+}
+let apiBase = defaultApiBase;
+try { const saved = localStorage.getItem(serverKey); if (saved) apiBase = serverOrigin(saved); } catch { /* usa a configuração do site */ }
+let controller, healthController, connecting = false;
 let requestTimeout = 180000;
 let maxBytes = 104857600;
 let history = [];
@@ -86,27 +94,78 @@ function filenameFromHeader(header, tipo) {
   return match ? match[1].replace(/\\(.)/g, '$1') : tipo === 'audio' ? 'audio.mp3' : 'video.mp4';
 }
 async function checkHealth() {
+  const checkedBase = apiBase;
+  healthController?.abort();
+  const current = new AbortController(); healthController = current;
   const button = $('#server-state');
   button.disabled = true;
   $('#server-label').textContent = 'Conectando…';
   try {
-    const response = await fetch(`${apiBase}/api/health`, { signal: AbortSignal.timeout(70000), cache: 'no-store' });
+    const response = await fetch(`${checkedBase}/api/health`, { signal: AbortSignal.any([current.signal, AbortSignal.timeout(70000)]), cache: 'no-store' });
     if (!response.ok) throw new Error();
     const health = await response.json();
-    button.dataset.state = health.ready ? 'ok' : 'error';
-    $('#server-label').textContent = health.ready ? 'API disponível' : 'API indisponível';
+    if (checkedBase !== apiBase) return;
+    renderHealth(health);
     if (!health.ready) showFeedback('error', 'As ferramentas de mídia estão indisponíveis.', 'O administrador precisa verificar a instalação no servidor.');
-    if (health.limits) {
-      requestTimeout = health.limits.timeoutSeconds * 1000;
-      maxBytes = health.limits.maxFileSizeMB * 1048576;
-      $('#limits-note').textContent = `Até ${Math.floor(health.limits.maxDurationSeconds / 60)} min por vídeo · Até ${health.limits.maxFileSizeMB} MB por arquivo`;
-    }
   } catch {
+    if (current.signal.aborted || checkedBase !== apiBase) return;
     button.dataset.state = 'error';
     $('#server-label').textContent = 'Reconectar API';
     showFeedback('error', 'Não foi possível conectar ao servidor.', 'Ele pode estar iniciando. Toque em Reconectar API para tentar novamente.');
-  } finally { button.disabled = false; }
+  } finally { if (healthController === current) button.disabled = false; }
 }
+function renderHealth(health) {
+  $('#server-state').dataset.state = health.ready ? 'ok' : 'error';
+  $('#server-label').textContent = health.ready ? 'API disponível' : 'API indisponível';
+  if (health.limits) {
+    requestTimeout = health.limits.timeoutSeconds * 1000;
+    maxBytes = health.limits.maxFileSizeMB * 1048576;
+    $('#limits-note').textContent = `Até ${Math.floor(health.limits.maxDurationSeconds / 60)} min por vídeo · Até ${health.limits.maxFileSizeMB} MB por arquivo`;
+  }
+}
+$('#server-url').value = apiBase;
+$('#connection-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const message = $('#connection-message'), button = $('#save-server');
+  if (controller) { message.textContent = 'Conclua ou cancele o download antes de trocar de servidor.'; return; }
+  if (connecting) return;
+  connecting = true; fields.disabled = true;
+  button.disabled = true; $('#reset-server').disabled = true; message.textContent = 'Verificando seu servidor…';
+  try {
+    const candidate = serverOrigin($('#server-url').value);
+    const response = await fetch(`${candidate}/api/health`, { signal: AbortSignal.timeout(15000), cache: 'no-store' });
+    const health = await response.json();
+    if (!response.ok || !health.ready || !['ytdlp', 'ffmpeg', 'ffprobe'].every(name => health.dependencies?.[name] === true)) throw new Error('Esse servidor ainda não está pronto. Confira se ele está ligado e se o endereço está correto.');
+    healthController?.abort(); apiBase = candidate; password.value = '';
+    let saved = true;
+    try { localStorage.setItem(serverKey, apiBase); } catch { saved = false; }
+    renderHealth(health); $('#server-state').disabled = false; feedback.hidden = true;
+    message.textContent = saved ? 'Servidor conectado. O endereço foi salvo neste navegador. Informe sua senha para baixar.' : 'Servidor conectado nesta aba. Informe sua senha para baixar.';
+    $('#server-url').value = apiBase;
+  } catch (error) { message.textContent = error.message === 'Failed to fetch' ? 'Não consegui conectar. Confira o endereço e se o servidor no PC está ligado.' : error.message; }
+  finally { connecting = false; fields.disabled = false; button.disabled = false; $('#reset-server').disabled = false; }
+});
+$('#reset-server').addEventListener('click', () => {
+  if (controller || connecting) { $('#connection-message').textContent = 'Conclua ou cancele a operação antes de trocar de servidor.'; return; }
+  try { localStorage.removeItem(serverKey); } catch { /* opcional */ }
+  apiBase = defaultApiBase; password.value = ''; $('#server-url').value = apiBase;
+  $('#connection-message').textContent = 'Endereço original restaurado.'; checkHealth();
+});
+function readSuggestedServer() {
+  try {
+    const suggested = new URLSearchParams(window.location.hash.slice(1)).get('servidor');
+    if (suggested) {
+      const candidate = serverOrigin(suggested);
+      if (candidate !== apiBase) {
+        $('#server-url').value = candidate; $('#connection-panel').open = true;
+        $('#connection-message').textContent = 'Seu PC indicou um novo endereço. Confira e toque em Conectar servidor para usá-lo.';
+      }
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  } catch { /* endereço sugerido inválido não altera o servidor */ }
+}
+window.addEventListener('hashchange', readSuggestedServer);
+readSuggestedServer();
 $('#server-state').addEventListener('click', checkHealth);
 async function jobRequest(path, options, signal) {
   const response = await fetch(`${apiBase}${path}`, { ...options, signal: AbortSignal.any([signal, AbortSignal.timeout(70000)]), cache: 'no-store' });
@@ -125,7 +184,7 @@ function waitForPoll(signal) {
 }
 form.addEventListener('submit', async event => {
   event.preventDefault();
-  if (controller || !form.reportValidity()) return;
+  if (controller || connecting || !form.reportValidity()) return;
   const input = { url: urlInput.value.trim(), tipo: form.elements.tipo.value, qualidade: $('#quality').value, thumbnail: $('#thumbnail').checked };
   controller = new AbortController();
   let jobId;

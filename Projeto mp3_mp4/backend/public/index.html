@@ -29,6 +29,16 @@
       <nav aria-label="Navegação principal"><a href="#como-funciona">Como funciona</a><a href="#perguntas">Perguntas</a></nav>
       <button class="server-state" id="server-state" type="button" title="Verificar conexão com a API"><span class="status-dot"></span><span id="server-label">Conectando…</span></button>
     </header>
+    <details class="connection-panel" id="connection-panel">
+      <summary>Conectar meu servidor</summary>
+      <form id="connection-form">
+        <label class="field-label" for="server-url">Endereço do servidor no seu PC</label>
+        <p class="field-help">Use o endereço HTTPS mostrado ao iniciar o servidor. Ele pode mudar quando o PC ou o túnel reinicia.</p>
+        <input id="server-url" type="url" placeholder="https://seu-endereco.trycloudflare.com" autocomplete="off" maxlength="2048" required>
+        <div class="connection-actions"><button type="submit" id="save-server">Conectar servidor</button><button type="button" id="reset-server">Usar endereço original</button></div>
+        <p id="connection-message" role="status" aria-live="polite"></p>
+      </form>
+    </details>
     <main>
       <section class="workspace" aria-labelledby="page-title">
         <div class="intro">

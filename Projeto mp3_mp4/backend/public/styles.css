@@ -1143,3 +1143,69 @@ footer > span {
     height: 10px;
   }
 }
+.connection-panel {
+  margin: -8px 0 20px;
+  text-align: right;
+  font-size: 11px;
+  color: #70796c;
+}
+.connection-panel summary {
+  display: inline-block;
+  cursor: pointer;
+  padding: 6px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.connection-panel form {
+  margin: 8px 0 0 auto;
+  max-width: 530px;
+  padding: 22px;
+  border: 1px solid #dce0d5;
+  border-radius: 15px;
+  background: #fff;
+  text-align: left;
+}
+.connection-panel .field-help {
+  line-height: 1.7;
+}
+.connection-panel input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid #dce0d5;
+  border-radius: 8px;
+  font: inherit;
+  color: #26332a;
+  background: #fafbf8;
+}
+.connection-panel input:focus-visible {
+  outline: 2px solid #8d9f7d;
+  outline-offset: 2px;
+}
+.connection-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.connection-actions button {
+  border: 0;
+  padding: 10px 13px;
+  border-radius: 8px;
+  font: inherit;
+  cursor: pointer;
+}
+#save-server {
+  background: #364633;
+  color: white;
+}
+#reset-server {
+  background: #f2f4ed;
+  color: #46553f;
+}
+#connection-message {
+  margin: 12px 0 0;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}

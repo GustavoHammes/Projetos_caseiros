@@ -12,10 +12,18 @@ async function start() {
   });
   server.requestTimeout = config.timeoutMs + 30000;
   server.setTimeout(config.timeoutMs + 30000);
-  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
+  let stopping = false;
+  function shutdown() {
+    if (stopping) return;
+    stopping = true;
     const cleanup = app.locals.shutdown();
     Promise.all([cleanup, new Promise(resolve => server.close(resolve))]).then(() => process.exit(0));
     setTimeout(() => process.exit(1), 10000).unref();
-  });
+  }
+  for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, shutdown);
+  if (process.connected) {
+    process.on('message', message => { if (message?.type === 'shutdown') shutdown(); });
+    process.once('disconnect', shutdown);
+  }
 }
 start().catch(error => { console.error(error.message); process.exitCode = 1; });
