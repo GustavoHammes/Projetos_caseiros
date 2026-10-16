@@ -17,6 +17,7 @@ function getConfig() {
     ytdlp: process.env.YTDLP_PATH || (fs.existsSync(localYtdlp) ? localYtdlp : 'yt-dlp'),
     ffmpeg: process.env.FFMPEG_LOCATION || (fs.existsSync(localFfmpeg) ? localFfmpeg : ''), cookies: process.env.YTDLP_COOKIES_FILE || '',
     downloadRoot: path.resolve(__dirname, '../downloads'), timeoutMs: integer(process.env.DOWNLOAD_TIMEOUT_SECONDS, 180, 600) * 1000,
+    jobRetentionMs: integer(process.env.JOB_RETENTION_SECONDS, 300, 1800) * 1000,
     maxBytes: integer(process.env.MAX_FILE_SIZE_MB, 100, 500) * 1024 * 1024, maxDuration: integer(process.env.MAX_DURATION_SECONDS, 1200, 7200),
     maxConcurrent: integer(process.env.MAX_CONCURRENT_DOWNLOADS, 2, 5), rateLimit: integer(process.env.RATE_LIMIT_REQUESTS, 30, 1000), rateWindowMs: 900000,
   };

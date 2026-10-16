@@ -13,8 +13,8 @@ async function start() {
   server.requestTimeout = config.timeoutMs + 30000;
   server.setTimeout(config.timeoutMs + 30000);
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
-    app.locals.shutdown();
-    server.close(() => process.exit(0));
+    const cleanup = app.locals.shutdown();
+    Promise.all([cleanup, new Promise(resolve => server.close(resolve))]).then(() => process.exit(0));
     setTimeout(() => process.exit(1), 10000).unref();
   });
 }

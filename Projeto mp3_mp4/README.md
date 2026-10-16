@@ -2,9 +2,9 @@
 
 Site privado em português para salvar áudio MP3 e vídeo MP4. Site e API funcionam no mesmo servidor Node.js, com yt-dlp e FFmpeg. O aplicativo Expo está em `frontend/`; a versão web principal está em `backend/public/` e também pode ser publicada na Vercel.
 
-**Site publicado:** https://super-baixador-hammes.onrender.com (plano Free, mesma senha configurada no backend local).
+**Publicação anterior:** https://super-baixador-hammes.onrender.com (Render Free). A migração solicitada para Koyeb Free está preparada em [docs/KOYEB.md](docs/KOYEB.md); a publicação depende do acesso à conta Koyeb. Ainda não existe endereço Koyeb validado.
 
-**Validação em 15/10/2026:** 12 testes automatizados passaram; downloads reais de MP3 com capa e MP4 com áudio passaram para YouTube local e Internet Archive no Render. YouTube e Vimeo exigiram autenticação/verificação no IP do Render. Veja [o relatório](docs/VALIDACAO.md) antes de depender dessas plataformas na nuvem. O endereço antigo da Vercel precisa de uma nova publicação com `BACKEND_ORIGIN` para usar esta API.
+**Validação em 16/10/2026:** 17 testes automatizados passaram. O novo fluxo assíncrono baixou MP3 com capa e MP4 com áudio do YouTube localmente; o formulário também entregou um MP3 real no navegador. Os testes anteriores do Internet Archive no Render passaram, enquanto YouTube e Vimeo exigiram autenticação/verificação naquele IP. Veja [o relatório](docs/VALIDACAO.md). O endereço antigo da Vercel precisa de uma nova publicação com `BACKEND_ORIGIN` para usar esta API.
 
 ## Rodar no Windows
 
@@ -26,7 +26,7 @@ npm test          # testes HTTP com download simulado
 npm run test:live # downloads reais pela API local, com inspeção por ffprobe
 ```
 
-Os testes reais usam um vídeo público curto do YouTube. Geram arquivos e relatório em `.artifacts/`, ignorados pelo Git. Para testar outro conteúdo público, defina `TEST_MEDIA_URL`. Para testar uma API publicada, defina também `TEST_API_URL` com a origem HTTPS. A senha é lida do ambiente, sem ser impressa.
+Os testes reais usam um vídeo público curto do YouTube e o fluxo de tarefas utilizado pelo site. Geram arquivos e relatório em `.artifacts/`, ignorados pelo Git. Para testar outro conteúdo público, defina `TEST_MEDIA_URL`. Para testar uma API publicada, defina também `TEST_API_URL` com a origem HTTPS. A senha é lida do ambiente, sem ser impressa. `TEST_DOWNLOAD_MODE=direct` testa o endpoint antigo.
 
 ## Comportamento
 
@@ -36,6 +36,7 @@ Os testes reais usam um vídeo público curto do YouTube. Geram arquivos e relat
 - Interface responsiva, mensagens de erro, cancelamento e histórico dos últimos cinco downloads no navegador.
 - A senha não é persistida pelo site e é enviada no cabeçalho Authorization. Limpe o campo ao usar um computador compartilhado.
 - Diretório temporário exclusivo por download, removido depois do envio, cancelamento ou erro.
+- A interface inicia uma tarefa e consulta seu estado enquanto a conversão acontece. Arquivos prontos aguardam até cinco minutos para retirada; a quantidade armazenada também tem limite.
 - Limites de duração, tamanho, tempo, tentativas por IP e concorrência. Conteúdo privado, transmissões ao vivo e playlists completas não fazem parte do fluxo.
 - As plataformas podem restringir downloads por IP, região ou autenticação. Um teste local não garante disponibilidade em um datacenter. Não há tentativa automática de contornar bloqueios.
 
@@ -57,6 +58,21 @@ Content-Type: application/json
 Sucesso: arquivo anexo MP3/MP4. Falha: JSON com `error` e `code`. Códigos principais: 400 (entrada), 401 (senha), 413 (tamanho), 422 (mídia indisponível/restrita), 429 (tentativas/concorrência), 503 (dependências) e 504 (tempo). A saúde responde 200 quando o servidor atende; confira também `ready` para disponibilidade das ferramentas.
 
 `GET /api/download` mantém compatibilidade com o app antigo. Prefira Authorization também no GET; senha na query existe apenas para compatibilidade e pode aparecer nos logs dos intermediários.
+
+A interface web usa estes endpoints autenticados com o mesmo Bearer:
+
+1. `POST /api/jobs` com o JSON de download retorna `202` e um `id` aleatório.
+2. `GET /api/jobs/:id` retorna `processing`, `ready` ou `failed`. Falhas incluem `error`, `code` e `httpStatus`.
+3. `GET /api/jobs/:id/file` retira o arquivo pronto uma única vez. O servidor o remove após o envio.
+4. `DELETE /api/jobs/:id` cancela o processamento e remove os temporários.
+
+As consultas autenticadas não consomem a franquia de novas solicitações. Tarefas usam memória e disco temporário da única instância: reiniciar o servidor perde tarefas pendentes. `JOB_RETENTION_SECONDS` controla a expiração após o processamento (300 por padrão). Não há Redis, banco ou worker pago.
+
+## Publicar no Koyeb Free
+
+O perfil [deploy/koyeb-free.json](deploy/koyeb-free.json) configura site e API no mesmo serviço Docker gratuito. `npm run deploy:koyeb` mostra o plano sem criar recursos; o procedimento de publicação e acesso está em [docs/KOYEB.md](docs/KOYEB.md).
+
+O Koyeb informa limite HTTP de 100 segundos, por isso a interface usa tarefas consultadas em requisições curtas. O app Expo ainda usa o endpoint direto e permanece sujeito a esse limite. A instância gratuita tem 512 MB, 0,1 vCPU e pausa após inatividade; a conversão pode demorar. O plano de cadastro da conta precisa ser conferido antes de qualquer confirmação de cartão ou cobrança.
 
 ## Hospedagem gratuita no Render
 

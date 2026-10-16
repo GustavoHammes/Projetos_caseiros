@@ -1,0 +1,25 @@
+{
+  "app": "super-baixador-hammes",
+  "service": "web",
+  "repository": "github.com/GustavoHammes/Projetos_caseiros",
+  "branch": "codex/profissionalizar-baixador",
+  "workdir": "Projeto mp3_mp4",
+  "dockerfile": "Dockerfile",
+  "instanceType": "free",
+  "region": "was",
+  "passwordSecret": "super-baixador-hammes-password",
+  "env": {
+    "NODE_ENV": "production",
+    "NODE_OPTIONS": "--max-old-space-size=192",
+    "HOST": "0.0.0.0",
+    "PORT": "3000",
+    "TRUST_PROXY_HOPS": "1",
+    "ALLOWED_ORIGINS": "https://baixador-mp3.vercel.app",
+    "MAX_FILE_SIZE_MB": "50",
+    "MAX_DURATION_SECONDS": "600",
+    "DOWNLOAD_TIMEOUT_SECONDS": "600",
+    "MAX_CONCURRENT_DOWNLOADS": "1",
+    "RATE_LIMIT_REQUESTS": "20",
+    "JOB_RETENTION_SECONDS": "300"
+  }
+}

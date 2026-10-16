@@ -108,18 +108,44 @@ async function checkHealth() {
   } finally { button.disabled = false; }
 }
 $('#server-state').addEventListener('click', checkHealth);
+async function jobRequest(path, options, signal) {
+  const response = await fetch(`${apiBase}${path}`, { ...options, signal: AbortSignal.any([signal, AbortSignal.timeout(70000)]), cache: 'no-store' });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.error || `O servidor retornou um erro (${response.status}). Tente novamente.`);
+  if (!data) throw new Error('Resposta inválida do servidor. Tente novamente.');
+  return data;
+}
+function waitForPoll(signal) {
+  return new Promise((resolve, reject) => {
+    const abort = () => { clearTimeout(timer); reject(new DOMException('Cancelado', 'AbortError')); };
+    const timer = setTimeout(() => { signal.removeEventListener('abort', abort); resolve(); }, 2000);
+    if (signal.aborted) abort();
+    else signal.addEventListener('abort', abort, { once: true });
+  });
+}
 form.addEventListener('submit', async event => {
   event.preventDefault();
   if (controller || !form.reportValidity()) return;
   const input = { url: urlInput.value.trim(), tipo: form.elements.tipo.value, qualidade: $('#quality').value, thumbnail: $('#thumbnail').checked };
   controller = new AbortController();
+  let jobId;
+  const headers = { Authorization: `Bearer ${password.value}` };
   let timedOut = false;
   const timeout = setTimeout(() => { timedOut = true; controller?.abort(); }, requestTimeout + 80000);
   fields.disabled = true;
   form.setAttribute('aria-busy', 'true');
   showFeedback('loading', 'Preparando seu arquivo…', 'Buscando a mídia e convertendo para o formato escolhido. Isso pode levar alguns minutos.');
   try {
-    const response = await fetch(`${apiBase}/api/download`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${password.value}` }, body: JSON.stringify(input), signal: controller.signal });
+    const job = await jobRequest('/api/jobs', { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(input) }, controller.signal);
+    if (typeof job.id !== 'string' || !/^[a-f0-9-]{36}$/.test(job.id)) throw new Error('Resposta inválida do servidor.');
+    jobId = job.id;
+    while (true) {
+      const state = await jobRequest(`/api/jobs/${jobId}`, { headers }, controller.signal);
+      if (state.status === 'ready') break;
+      if (state.status === 'failed') throw new Error(state.error || 'Não foi possível preparar o arquivo.');
+      await waitForPoll(controller.signal);
+    }
+    const response = await fetch(`${apiBase}/api/jobs/${jobId}/file`, { headers, signal: controller.signal, cache: 'no-store' });
     if (!response.ok) {
       const data = await response.json().catch(() => null);
       throw new Error(data?.error || `O servidor retornou um erro (${response.status}). Tente novamente.`);
@@ -150,6 +176,7 @@ form.addEventListener('submit', async event => {
     const aborted = controller.signal.aborted;
     showFeedback(aborted && !timedOut ? 'info' : 'error', aborted ? timedOut ? 'O tempo de espera acabou.' : 'Download cancelado.' : 'Não foi possível concluir.', aborted ? 'Você pode tentar novamente quando quiser.' : error.message === 'Failed to fetch' ? 'A conexão com o servidor caiu. Verifique sua internet e tente novamente.' : error.message);
   } finally {
+    if (jobId) void fetch(`${apiBase}/api/jobs/${jobId}`, { method: 'DELETE', headers, signal: AbortSignal.timeout(10000), keepalive: true }).catch(() => {});
     clearTimeout(timeout); controller = null; fields.disabled = false; form.removeAttribute('aria-busy');
   }
 });

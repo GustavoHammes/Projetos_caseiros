@@ -1,4 +1,24 @@
-# Resultado da validação — 15/10/2026
+# Resultado da validação — 16/10/2026
+
+## Preparação para Koyeb Free
+
+Ainda não publicado: o painel Koyeb exige login e a conta/plano precisam ser conferidos. Não houve contratação nem criação de serviço Koyeb. O perfil e o procedimento estão em [KOYEB.md](KOYEB.md).
+
+A interface passou a criar tarefas, consultar o estado e retirar o arquivo pronto. Isso evita manter a conexão HTTP aberta durante a conversão, pois o Koyeb informa limite de 100 segundos por requisição. Cancelar interrompe o processo e limpa os temporários; arquivos prontos abandonados expiram em cinco minutos. As tarefas compartilham o limite de conversões com o endpoint antigo e há limite de arquivos aguardando retirada.
+
+Verificações realizadas em 16/10/2026:
+
+- 17 testes automatizados passaram, incluindo criação imediata de tarefa enquanto a conversão ainda está pendente, consultas autenticadas sem consumir a franquia de novas solicitações, cancelamento, liberação de vaga, expiração, limite de armazenamento e limpeza após erro.
+- `npm run doctor` confirmou yt-dlp 2026.08.19 e FFmpeg/ffprobe 9.0.2.
+- Download real do YouTube pela API assíncrona local: MP3 com capa, 356.606 bytes, 19,0055 segundos; MP4 H.264/AAC, 744.412 bytes, 19,0636 segundos, 240p. A origem tem 240p; o seletor define um teto de qualidade.
+- Fluxo no navegador local: formulário → criação e consulta de tarefa → arquivo `Me at the zoo [jNQXAC9IVRw].mp3` entregue em Downloads → mensagem de sucesso e histórico. Senha limpa do formulário após o teste.
+- Cancelamento de vídeo pelo botão da interface funcionou; nenhuma mensagem de erro no console do navegador durante os testes.
+- Diretório temporário vazio após os downloads reais.
+- Plano de publicação gerado sem criar recursos; flags conferidas na CLI oficial 5.12.0, incluindo instância `free`, work directory do monorepo, Docker e saúde HTTP.
+
+O funcionamento no IP do Koyeb ainda precisa ser testado após o deploy. A CLI foi baixada do release oficial com SHA256 verificado. Os testes abaixo são históricos da publicação Render em 15/10/2026.
+
+## Publicação Render anterior — 15/10/2026
 
 Site publicado: https://super-baixador-hammes.onrender.com
 

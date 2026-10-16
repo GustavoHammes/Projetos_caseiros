@@ -19,13 +19,25 @@ async function fixture(t, { override = {}, download, deps = dependencies } = {})
   const server = app.listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   t.after(async () => {
-    app.locals.shutdown();
+    await app.locals.shutdown();
     await new Promise(resolve => server.close(resolve));
     await fs.rm(directory, { recursive: true, force: true });
   });
   const base = `http://127.0.0.1:${server.address().port}`;
   const post = (body = payload, token = config.password) => fetch(`${base}/api/download`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
-  return { base, post, directory, app };
+  const jobRequest = (suffix = '', { method = 'GET', body, token = config.password } = {}) => fetch(`${base}/api/jobs${suffix}`, {
+    method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  return { base, post, directory, app, jobRequest };
+}
+
+async function finishedJob(f, id) {
+  for (let count = 0; count < 100; count++) {
+    const state = await (await f.jobRequest(`/${id}`)).json();
+    if (state.status !== 'processing') return state;
+    await delay(10);
+  }
+  assert.fail('Tarefa não terminou');
 }
 test('site, assets e saúde respondem sem expor a senha', async t => {
   const f = await fixture(t);
@@ -67,6 +79,7 @@ test('dependências ausentes deixam a API indisponível', async t => {
   const f = await fixture(t, { deps: {} });
   assert.equal((await (await fetch(`${f.base}/api/health`)).json()).ready, false);
   assert.equal((await f.post()).status, 503);
+  assert.equal((await f.jobRequest('', { method: 'POST', body: payload })).status, 503);
 });
 test('limpa temporários após sucesso e erro', async t => {
   for (const fail of [false, true]) {
@@ -96,6 +109,8 @@ test('CORS permite somente origem explicitamente configurada', async t => {
   const allowed = await fetch(`${f.base}/api/health`, { headers: { Origin: 'https://baixador-mp3.vercel.app' } });
   assert.equal(allowed.headers.get('Access-Control-Allow-Origin'), 'https://baixador-mp3.vercel.app');
   const blocked = await fetch(`${f.base}/api/health`, { headers: { Origin: 'https://evil.test' } }); assert.equal(blocked.headers.get('Access-Control-Allow-Origin'), null);
+  const preflight = await fetch(`${f.base}/api/jobs/test`, { method: 'OPTIONS', headers: { Origin: 'https://baixador-mp3.vercel.app', 'Access-Control-Request-Method': 'DELETE', 'Access-Control-Request-Headers': 'authorization' } });
+  assert.match(preflight.headers.get('Access-Control-Allow-Methods'), /DELETE/);
 });
 test('compatibilidade GET usa os mesmos controles', async t => {
   const f = await fixture(t);
@@ -108,4 +123,85 @@ test('capa é aplicada e o link é um argumento isolado, sem shell', () => {
 });
 test('timeout encerra processos e retorna erro identificável', async () => {
   await assert.rejects(run(process.execPath, ['-e', 'setInterval(()=>{},1000)'], { timeoutMs: 150 }), error => error.code === 'TIMEOUT');
+});
+
+test('tarefas respondem antes da conversão e compartilham limite com o download antigo', async t => {
+  let release;
+  const f = await fixture(t, { override: { maxConcurrent: 1, rateLimit: 2 }, download: async (input, { directory, signal }) => {
+    await new Promise(resolve => { release = resolve; signal.addEventListener('abort', resolve, { once: true }); });
+    const file = path.join(directory, 'demorado.mp3'); await fs.writeFile(file, 'audio'); return file;
+  } });
+  const created = await f.jobRequest('', { method: 'POST', body: payload });
+  assert.equal(created.status, 202);
+  const { id } = await created.json();
+  for (let index = 0; index < 5; index++) assert.equal((await f.jobRequest(`/${id}`)).status, 200);
+  assert.equal((await f.jobRequest(`/${id}/file`)).status, 409);
+  assert.equal((await f.post()).status, 429);
+  while (!release) await delay(5);
+  release();
+  assert.equal((await finishedJob(f, id)).status, 'ready');
+  const file = await f.jobRequest(`/${id}/file`);
+  assert.equal(file.status, 200); assert.equal(await file.text(), 'audio');
+  for (let count = 0; count < 50 && (await fs.readdir(f.directory)).length; count++) await delay(10);
+  assert.deepEqual(await fs.readdir(f.directory), []);
+  assert.equal((await f.jobRequest(`/${id}`)).status, 404);
+});
+
+test('tarefas exigem senha em criação, consulta, retirada e cancelamento', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.jobRequest('', { method: 'POST', body: payload, token: 'errada' })).status, 401);
+  assert.equal((await f.jobRequest('', { method: 'POST', body: { url: 'https://127.0.0.1' } })).status, 400);
+  const { id } = await (await f.jobRequest('', { method: 'POST', body: payload })).json();
+  await finishedJob(f, id);
+  for (const [suffix, method] of [[`/${id}`, 'GET'], [`/${id}/file`, 'GET'], [`/${id}`, 'DELETE']]) {
+    assert.equal((await f.jobRequest(suffix, { method, token: 'errada' })).status, 401);
+  }
+  assert.equal((await f.jobRequest(`/${id}`, { method: 'DELETE' })).status, 204);
+  assert.deepEqual(await fs.readdir(f.directory), []);
+});
+
+test('cancelar uma tarefa interrompe o processo e libera a vaga', async t => {
+  let aborted = 0, started = 0;
+  const f = await fixture(t, { override: { maxConcurrent: 1 }, download: async (input, { signal, directory }) => {
+    await fs.writeFile(path.join(directory, 'parcial.part'), 'partial');
+    started++;
+    await new Promise(resolve => {
+      if (signal.aborted) resolve(); else signal.addEventListener('abort', resolve, { once: true });
+    });
+    aborted++;
+    throw new DownloadError('Cancelado.', 499, 'CANCELLED');
+  } });
+  for (let index = 0; index < 2; index++) {
+    const created = await f.jobRequest('', { method: 'POST', body: payload });
+    assert.equal(created.status, 202);
+    const { id } = await created.json();
+    while (started <= index) await delay(5);
+    assert.equal((await f.jobRequest(`/${id}`, { method: 'DELETE' })).status, 204);
+    assert.deepEqual(await fs.readdir(f.directory), []);
+  }
+  assert.equal(aborted, 2);
+});
+
+test('arquivos abandonados expiram e a quantidade de tarefas armazenadas é limitada', async t => {
+  const f = await fixture(t, { override: { maxConcurrent: 1, jobRetentionMs: 500 } });
+  for (let index = 0; index < 3; index++) {
+    const { id } = await (await f.jobRequest('', { method: 'POST', body: payload })).json();
+    await finishedJob(f, id);
+  }
+  assert.equal((await f.jobRequest('', { method: 'POST', body: payload })).status, 429);
+  for (let count = 0; count < 150 && (await fs.readdir(f.directory)).length; count++) await delay(10);
+  assert.deepEqual(await fs.readdir(f.directory), []);
+  assert.equal((await f.jobRequest('', { method: 'POST', body: payload })).status, 202);
+});
+
+test('falhas das tarefas retornam mensagem pública e limpam os arquivos parciais', async t => {
+  const f = await fixture(t, { download: async (input, { directory }) => {
+    await fs.writeFile(path.join(directory, 'partial.part'), 'partial');
+    throw new DownloadError('A plataforma exige autenticação.', 422, 'PLATFORM_AUTH_REQUIRED');
+  } });
+  const { id } = await (await f.jobRequest('', { method: 'POST', body: payload })).json();
+  const state = await finishedJob(f, id);
+  assert.equal(state.status, 'failed'); assert.equal(state.httpStatus, 422);
+  assert.equal(state.code, 'PLATFORM_AUTH_REQUIRED');
+  assert.deepEqual(await fs.readdir(f.directory), []);
 });

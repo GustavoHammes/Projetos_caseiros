@@ -5,6 +5,7 @@
     "setup": "node scripts/setup-windows.js",
     "test": "npm --prefix backend test",
     "doctor": "npm --prefix backend run doctor",
+    "deploy:koyeb": "node scripts/deploy-koyeb.js",
     "test:live": "npm --prefix backend run test:live"
   },
   "engines": { "node": ">=22" }
